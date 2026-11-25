@@ -1,12 +1,11 @@
 package com.example.transactiontracker
 
-import android.Manifest
 import android.app.Activity
 import android.os.Bundle
-import android.content.pm.PackageManager
+import android.provider.Settings
+import android.content.Intent
+import android.text.InputType
 import android.widget.*
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 
 class MainActivity : Activity() {
     private val prefs by lazy { getSharedPreferences("tracker", MODE_PRIVATE) }
@@ -20,18 +19,15 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(36, 48, 36, 36)
         }
+        layout.addView(TextView(this).apply { text = "Transaction Tracker"; textSize = 24f })
         layout.addView(TextView(this).apply {
-            text = "Transaction Tracker"
-            textSize = 24f
-        })
-        layout.addView(TextView(this).apply {
-            text = "Paste your Google Apps Script Web App URL and secret token. Only messages that look like bank/UPI transaction alerts are processed."
+            text = "Enter your Google Apps Script Web App URL and secret token. The app checks transaction notifications and sends only date, amount and debit/credit to your sheet."
             textSize = 14f
         })
         endpoint = EditText(this).apply {
             hint = "Google Apps Script Web App URL"
             setText(prefs.getString("endpoint", ""))
-            inputType = android.text.InputType.TYPE_TEXT_VARIATION_URI
+            inputType = InputType.TYPE_TEXT_VARIATION_URI
         }
         token = EditText(this).apply {
             hint = "Secret token"
@@ -48,36 +44,26 @@ class MainActivity : Activity() {
             }
         })
         layout.addView(Button(this).apply {
-            text = "Enable SMS access"
-            setOnClickListener { requestSmsPermissions() }
+            text = "Enable notification access"
+            setOnClickListener { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
         })
         status = TextView(this).apply { textSize = 14f }
         layout.addView(status)
         layout.addView(TextView(this).apply {
-            text = "Privacy: SMS is filtered on this phone. Matching transaction alerts are sent to the Google Sheet endpoint you configure. No SMS inbox upload or background reading of old messages is performed."
+            text = "Privacy: notification text is processed temporarily on this device. Only transaction date, amount and debit/credit are sent to Google Sheets. Notification access is broad Android access; the app filters transaction alerts and does not save notification text."
             textSize = 12f
         })
         setContentView(ScrollView(this).apply { addView(layout) })
-        updateStatus()
     }
 
-    private fun requestSmsPermissions() {
-        val missing = arrayOf(Manifest.permission.RECEIVE_SMS)
-            .filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
-        if (missing.isNotEmpty()) ActivityCompat.requestPermissions(this, missing.toTypedArray(), 42)
-        else updateStatus()
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    override fun onResume() {
+        super.onResume()
         updateStatus()
-        if (grantResults.any { it != PackageManager.PERMISSION_GRANTED }) {
-            Toast.makeText(this, "SMS permission is needed to detect incoming transaction alerts.", Toast.LENGTH_LONG).show()
-        }
     }
 
     private fun updateStatus() {
-        val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
-        status.text = if (granted) "SMS detection permission: enabled" else "SMS detection permission: not enabled"
+        val enabled = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+            ?.contains(packageName) == true
+        status.text = if (enabled) "Notification access: enabled" else "Notification access: not enabled"
     }
 }
