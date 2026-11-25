@@ -18,7 +18,7 @@ object TransactionParser {
     fun looksLikeTransaction(raw: String): Boolean {
         val s = raw.lowercase(Locale.ROOT)
         val hasMoney = amountRegex.containsMatchIn(raw) || Regex("""\b(?:debited|credited|withdrawn|deposited)\b""", RegexOption.IGNORE_CASE).containsMatchIn(raw)
-        val hasSignal = listOf("upi", "a/c", "acct", "account", "debited", "credited", "txn", "transaction", "withdrawn", "deposited", "neft", "imps", "rtgs", "pos").any { s.contains(it) }
+        val hasSignal = listOf("upi", "a/c", "acct", "account", "debited", "credited", "received", "sent", "paid", "spent", "withdrawn", "deposited", "txn", "transaction", "neft", "imps", "rtgs", "pos").any { s.contains(it) }
         val marketing = listOf("offer", "cashback offer", "loan offer", "apply now", "sale ends").any { s.contains(it) }
         return hasMoney && hasSignal && !marketing
     }
